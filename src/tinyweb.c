@@ -37,9 +37,12 @@
 
 #include "tinyweb.h"
 #include "connect_tcp.h"
+#include "passive_tcp.h"
+#include "socket_io.h"
 
 #include "safe_print.h"
 #include "sem_print.h"
+#include "request.h"
 
 
 // Must be true for the server accepting clients,
@@ -54,13 +57,20 @@ static volatile sig_atomic_t server_running = false;
 static void
 sig_handler(int sig)
 {
+    int status;
+    pid_t pid;
+
     switch(sig) {
         case SIGINT:
             // use our own thread-safe implemention of printf
             safe_printf("\n[%d] Server terminated due to keyboard interrupt\n", getpid());
             server_running = false;
             break;
-        // TODO: Complete signal handler
+        case SIGCHLD:
+            while ((pid=wait3(&status, WNOHANG, (struct rusage *)0)) != -1) {
+                safe_printf("\n[%d] Child finished, pid %d.\n", getpid(), pid);
+            } /* end while */
+            break;
         default:
             break;
     } /* end switch */
@@ -147,6 +157,16 @@ get_options(int argc, char *argv[], prog_options_t *opt)
                     fprintf(stderr, "Cannot resolve service '%s': %s\n", optarg, gai_strerror(err));
                     return EXIT_FAILURE;
                 } /* end if */
+
+                struct servent *pse = getservbyname(optarg, "http");
+                if (pse != 0) {
+                    opt->server_port = ntohs((unsigned short)pse->s_port);
+                    printf("%d\n", opt->server_port);
+                }
+                else {
+                    opt->server_port = (unsigned short)atoi(optarg);
+                    printf("%d\n", opt->server_port);
+                }
                 break;
             case 'd':
                 // 'optarg contains root directory */
@@ -220,10 +240,19 @@ install_signal_handlers(void)
     sa.sa_flags = 0;
     sigemptyset(&sa.sa_mask);
     sa.sa_handler = sig_handler;
-    if(sigaction(SIGINT, &sa, NULL) < 0) {
+    if (sigaction(SIGINT, &sa, NULL) < 0) {
         perror("sigaction(SIGINT)");
         exit(EXIT_FAILURE);
     } /* end if */
+
+    struct sigaction sa2;
+    sa2.sa_flags = 0;
+    sigemptyset(&sa2.sa_mask);
+    sa2.sa_handler = sig_handler;
+    if (sigaction(SIGCHLD, &sa2, NULL) < 0) {
+        perror("sigaction(SIGCHLD)");
+        exit(EXIT_FAILURE);
+    }
 } /* end of install_signal_handlers */
 
 
@@ -256,7 +285,50 @@ main(int argc, char *argv[])
     // condition set by the signal handler above
     printf("[%d] Starting server '%s'...\n", getpid(), my_opt.progname);
     server_running = true;
+
+    int sd_server = passive_tcp(my_opt.server_port, 5);
+
+
     while(server_running) {
+
+        int pid;
+
+        socklen_t client_sa_len;
+        struct sockaddr_in client_sa;
+        client_sa_len = sizeof(client_sa);
+
+        int sd_client = accept(sd_server,
+                (struct sockaddr *)&client_sa,
+                &client_sa_len);
+
+        if ((pid = fork()) < 0) {
+            perror("Could not fork");
+            exit(EXIT_FAILURE);
+        }
+        else if (pid > 0) {  /* parent process */
+            close(sd_client);
+        }
+        else {
+            close(sd_server);
+
+            char buf[MAX_SIZE_REQUEST];
+            // TODO check for errors
+            read_from_socket(sd_client, &buf[0], MAX_SIZE_REQUEST, 0);
+
+            request_t req;
+            parse_request(&buf[0], MAX_SIZE_REQUEST, &req);
+
+            safe_printf("METHOD: %d\n", req.method);
+            safe_printf("URI:    %s\n", req.uri);
+            safe_printf("RANGE:  %d\n", req.range_start);
+
+//int read_from_socket (int fd, char *buf, int len, int timeout);
+
+
+            close(sd_client);
+            exit(EXIT_SUCCESS);
+        }
+
         pause();
     } /* end while */
 

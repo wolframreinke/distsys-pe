@@ -20,8 +20,8 @@
 http_method_entry_t http_method_list[] = {
     { "GET",         HTTP_METHOD_GET             },
     { "HEAD",        HTTP_METHOD_HEAD            },
-    { "TEST",        HTTP_METHOD_TEST            },
-    { "ECHO",        HTTP_METHOD_ECHO            },
+    { "TEST",        HTTP_METHOD_NOT_IMPLEMENTED },
+    { "ECHO",        HTTP_METHOD_NOT_IMPLEMENTED },
     { "OPTIONS",     HTTP_METHOD_NOT_IMPLEMENTED },
     { "POST",        HTTP_METHOD_NOT_IMPLEMENTED },
     { "PUT",         HTTP_METHOD_NOT_IMPLEMENTED },
