@@ -1,4 +1,5 @@
 /*===================================================================
+ *
  * DHBW Ravensburg - Campus Friedrichshafen
  *
  * Vorlesung Verteilte Systeme
@@ -42,7 +43,9 @@
 
 #include "safe_print.h"
 #include "sem_print.h"
+#include "http.h"
 #include "request.h"
+#include "response.h"
 
 
 // Must be true for the server accepting clients,
@@ -308,7 +311,7 @@ main(int argc, char *argv[])
         else if (pid > 0) {  /* parent process */
             close(sd_client);
         }
-        else {
+        else {               /* child process */
             close(sd_server);
 
             char buf[MAX_SIZE_REQUEST];
@@ -316,16 +319,51 @@ main(int argc, char *argv[])
             read_from_socket(sd_client, &buf[0], MAX_SIZE_REQUEST, 0);
 
             request_t req;
-            parse_request(&buf[0], MAX_SIZE_REQUEST, &req);
+            int ret = parse_request(&buf[0], MAX_SIZE_REQUEST, &req);
 
-            safe_printf("METHOD: %d\n", req.method);
-            safe_printf("URI:    %s\n", req.uri);
-            safe_printf("RANGE:  %d\n", req.range_start);
+            int status;
+            switch (ret) {
 
-//int read_from_socket (int fd, char *buf, int len, int timeout);
+                case REQUEST_NORMAL:
+                    status = HTTP_STATUS_OK;
+                    break;
+                case REQUEST_PARTIAL:
+                    status = HTTP_STATUS_PARTIAL_CONTENT;
+                    break;
+                case REQUEST_ERROR:
+                    status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+                    break;
+                case REQUEST_COULD_NOT_PARSE:
+                    status = HTTP_STATUS_BAD_REQUEST;
+                    break;
+                case REQUEST_UNSUPPORTED:
+                    status = HTTP_STATUS_NOT_IMPLEMENTED;
+                    break;
+                default:
+                    status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
+                    break;
+            }
+
+            char filename[MAX_SIZE_URI];
+            if (sprintf(filename, "%s%s", my_opt.root_dir, req.uri) < 0) {
+                shutdown(sd_client, SHUT_WR);
+                exit(EXIT_FAILURE);
+            }
+            safe_printf("FILENAME: %s\n", filename);
+            safe_printf("METHOD:   %d\n", req.method);
+            safe_printf("STATUS:   %d\n", http_status_list[status].code);
+            safe_printf("URI:      %s\n", req.uri);
+            safe_printf("RANGE:    %d\n", req.range_start);
 
 
-            close(sd_client);
+            response_t res;
+            generate_response_header(filename, status, &req, &res);
+            send_response(sd_client, filename, &res);
+
+            //int read_from_socket (int fd, char *buf, int len, int timeout);
+
+            shutdown(sd_client, SHUT_WR);
+            // close(sd_client);
             exit(EXIT_SUCCESS);
         }
 
