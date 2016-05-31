@@ -45,15 +45,17 @@ find_next_clrf(char *str, int start) {
     return result;
 }
 
-int
-parse_request(char *request, size_t len, request_t *out) {
+http_status_t
+parse_request(char *request, request_t *out) {
 
+    /* Caution: the '\0' at the end of the first line is needed outside of this
+     * function.  Don't change unless you know what you're doing. */
     int size = find_next_clrf(request, 0);
     request[size] = '\0';
 
     int ret;
-    int result = parse_method_and_uri(request, size, out);
-    if (result != REQUEST_NORMAL) {
+    int result = parse_method_and_uri(request, out);
+    if (result != HTTP_STATUS_OK) {
         return result;
     }
 
@@ -69,11 +71,11 @@ parse_request(char *request, size_t len, request_t *out) {
         if (strncmp(current_line, "Range:", 6) == 0) {
 
             char *field_value = &current_line[6];
-            ret = parse_range(field_value, 0, out);
-            if (ret == REQUEST_COULD_NOT_PARSE) {
+            ret = parse_range(field_value, out);
+            if (ret == HTTP_STATUS_BAD_REQUEST) {
                 return ret;
             }
-            result = REQUEST_PARTIAL;
+            result = HTTP_STATUS_PARTIAL_CONTENT;
         }
         else if (strncmp(current_line, "If-Modified-Since:", 18) == 0) {
 
@@ -82,8 +84,8 @@ parse_request(char *request, size_t len, request_t *out) {
                 field_value++;
             }
 
-            ret = parse_date(field_value, 0, out);
-            if (ret == REQUEST_COULD_NOT_PARSE) {
+            ret = parse_date(field_value, out);
+            if (ret == HTTP_STATUS_BAD_REQUEST) {
                 return ret;
             }
         }
@@ -92,8 +94,8 @@ parse_request(char *request, size_t len, request_t *out) {
     return result;
 }
 
-int
-parse_method_and_uri(char *first_line, size_t len, request_t *out) {
+http_status_t
+parse_method_and_uri(char *first_line, request_t *out) {
 
     int offset;
     if (strncmp(first_line, "HEAD", 4) == 0) {
@@ -105,9 +107,10 @@ parse_method_and_uri(char *first_line, size_t len, request_t *out) {
         out->method = HTTP_METHOD_GET;
     }
     else {
-        return REQUEST_UNSUPPORTED;
+        return HTTP_STATUS_NOT_IMPLEMENTED;
     }
 
+    // TODO inspect return value of malloc
     out->uri = (char *)malloc((MAX_SIZE_URI+1) * sizeof(char));
 
     int size = offset;
@@ -116,18 +119,18 @@ parse_method_and_uri(char *first_line, size_t len, request_t *out) {
     } while (size < MAX_SIZE_LINE && first_line[size] != ' ');
 
     if (size >= MAX_SIZE_URI) {
-        return REQUEST_ERROR;
+        return HTTP_STATUS_INTERNAL_SERVER_ERROR;
     }
     else {
         memcpy(out->uri, &first_line[offset], size-offset);
         out->uri[size-offset] = '\0';
     }
 
-    return REQUEST_NORMAL;
+    return HTTP_STATUS_OK;
 }
 
-int
-parse_range(char *field, size_t len, request_t *out) {
+http_status_t
+parse_range(char *field, request_t *out) {
 
     // TODO? allow garbage
 
@@ -138,15 +141,15 @@ parse_range(char *field, size_t len, request_t *out) {
     int range_begin;
 
     if (sscanf(&field[begin+1], "%d", &range_begin) != 1) {
-        return REQUEST_COULD_NOT_PARSE;
+        return HTTP_STATUS_BAD_REQUEST;
     }
 
     out->range_start = range_begin;
-    return REQUEST_PARTIAL;
+    return HTTP_STATUS_PARTIAL_CONTENT;
 }
 
-int
-parse_date(char *field, size_t len, request_t *out) {
+http_status_t
+parse_date(char *field, request_t *out) {
 
     struct tm timestruct;
 
@@ -154,8 +157,8 @@ parse_date(char *field, size_t len, request_t *out) {
         out->modified_since = timegm(&timestruct);
     }
     else {
-        return REQUEST_COULD_NOT_PARSE;
+        return HTTP_STATUS_BAD_REQUEST;
     }
 
-    return REQUEST_NORMAL;
+    return HTTP_STATUS_OK;
 }

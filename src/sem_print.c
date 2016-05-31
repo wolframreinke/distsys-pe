@@ -42,7 +42,7 @@ set_verbosity_level(unsigned short level)
 
 
 int
-print_log(const char *format, ...)
+print_log(FILE *file, const char *format, ...)
 {
     int status;
     va_list args;
@@ -51,7 +51,7 @@ print_log(const char *format, ...)
         err_print("semaphore wait");
     } /* end if */
 
-    printf("[%d] ", getpid());
+    fprintf(file, "[%d] ", getpid());
 
     va_start(args, format);
     status = vprintf(format, args);

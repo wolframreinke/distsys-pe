@@ -36,7 +36,7 @@ select_socket_fd (int fd, int maxtime, int writep)
   timeout.tv_usec = 0;
 
   return select (fd + 1, writep ? NULL : &fds, writep ? &fds : NULL,
-		 &exceptfds, &timeout);
+                 &exceptfds, &timeout);
 } /* end of select_socket_fd */
 
 
@@ -48,10 +48,10 @@ read_from_socket (int fd, char *buf, int len, int timeout)
   do {
     if (timeout > 0) {
       do {
-	res = select_socket_fd (fd, timeout, 0);
+        res = select_socket_fd (fd, timeout, 0);
       } while (res == -1 && errno == EINTR);
       if (res <= 0)  {
-	return SOCKET_TIMEOUT;
+        return SOCKET_TIMEOUT;
       } /* end if */
     } /* end if */
     res = read(fd, buf, len);
@@ -73,12 +73,12 @@ write_to_socket (int fd, char *buf, int len, int timeout)
   while (len > 0) {
     do {
       if (timeout) {
-	do {
-	  res = select_socket_fd (fd, timeout, 1);
-	} while (res == -1 && errno == EINTR);
-	if (res <= 0) {
-	  return -1;
-	} /* end if */
+        do {
+          res = select_socket_fd (fd, timeout, 1);
+        } while (res == -1 && errno == EINTR);
+        if (res <= 0) {
+          return -1;
+        } /* end if */
       }
       res = write(fd, buf, len);
     } while (res == -1 && errno == EINTR);

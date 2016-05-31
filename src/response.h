@@ -34,7 +34,10 @@ void
 generate_response_header(char *path, http_status_t status, request_t *req,
         response_t *out);
 
-void
+int
 send_response(int sd, const char *filename, response_t *res);
+
+void
+send_static_500(int sd);
 
 #endif // _RESPONSE_H_

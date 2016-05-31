@@ -8,12 +8,6 @@
 #define MAX_SIZE_URI         255
 #define MAX_SIZE_LINE        512
 
-#define REQUEST_PARTIAL          1
-#define REQUEST_NORMAL           0
-#define REQUEST_ERROR           -1
-#define REQUEST_COULD_NOT_PARSE -2
-#define REQUEST_UNSUPPORTED     -3
-
 
 typedef struct {
 
@@ -25,16 +19,16 @@ typedef struct {
 
 } request_t;
 
-int
-parse_request(char *request, size_t len, request_t *out);
+http_status_t
+parse_request(char *request, request_t *out);
 
-int
-parse_method_and_uri(char *first_line, size_t len, request_t *out);
+http_status_t
+parse_method_and_uri(char *first_line, request_t *out);
 
-int
-parse_range(char *field, size_t len, request_t *out);
+http_status_t
+parse_range(char *field, request_t *out);
 
-int
-parse_date(char *field, size_t len, request_t *out);
+http_status_t
+parse_date(char *field, request_t *out);
 
 #endif // _REQUEST_H_

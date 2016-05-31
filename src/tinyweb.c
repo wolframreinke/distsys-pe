@@ -46,6 +46,7 @@
 #include "http.h"
 #include "request.h"
 #include "response.h"
+#include "log.h"
 
 
 // Must be true for the server accepting clients,
@@ -283,14 +284,19 @@ main(int argc, char *argv[])
     install_signal_handlers();
     init_logging_semaphore();
 
+    set_logfile(my_opt.log_fd);
+
     // TODO: start the server and handle clients...
     // here, as an example, show how to interact with the
     // condition set by the signal handler above
     printf("[%d] Starting server '%s'...\n", getpid(), my_opt.progname);
     server_running = true;
 
+    /* passive_tcp prints error messages internally */
     int sd_server = passive_tcp(my_opt.server_port, 5);
-
+    if (sd_server == -1) {
+        exit(EXIT_FAILURE);
+    }
 
     while(server_running) {
 
@@ -304,72 +310,94 @@ main(int argc, char *argv[])
                 (struct sockaddr *)&client_sa,
                 &client_sa_len);
 
-        if ((pid = fork()) < 0) {
-            perror("Could not fork");
-            exit(EXIT_FAILURE);
-        }
-        else if (pid > 0) {  /* parent process */
-            close(sd_client);
-        }
-        else {               /* child process */
-            close(sd_server);
-
-            char buf[MAX_SIZE_REQUEST];
-            // TODO check for errors
-            read_from_socket(sd_client, &buf[0], MAX_SIZE_REQUEST, 0);
-
-            request_t req;
-            int ret = parse_request(&buf[0], MAX_SIZE_REQUEST, &req);
-
-            int status;
-            switch (ret) {
-
-                case REQUEST_NORMAL:
-                    status = HTTP_STATUS_OK;
-                    break;
-                case REQUEST_PARTIAL:
-                    status = HTTP_STATUS_PARTIAL_CONTENT;
-                    break;
-                case REQUEST_ERROR:
-                    status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-                    break;
-                case REQUEST_COULD_NOT_PARSE:
-                    status = HTTP_STATUS_BAD_REQUEST;
-                    break;
-                case REQUEST_UNSUPPORTED:
-                    status = HTTP_STATUS_NOT_IMPLEMENTED;
-                    break;
-                default:
-                    status = HTTP_STATUS_INTERNAL_SERVER_ERROR;
-                    break;
+        if (sd_client == -1) {
+            if (errno != EINTR) {
+                perror("ERROR: accept()");
+                exit(EXIT_FAILURE);
             }
+        }
+        else {
 
-            char filename[MAX_SIZE_URI];
-            if (sprintf(filename, "%s%s", my_opt.root_dir, req.uri) < 0) {
+            if ((pid = fork()) < 0) {
+                perror("ERROR: fork()");
+                send_static_500(sd_client);
                 shutdown(sd_client, SHUT_WR);
                 exit(EXIT_FAILURE);
             }
-            safe_printf("FILENAME: %s\n", filename);
-            safe_printf("METHOD:   %d\n", req.method);
-            safe_printf("STATUS:   %d\n", http_status_list[status].code);
-            safe_printf("URI:      %s\n", req.uri);
-            safe_printf("RANGE:    %d\n", req.range_start);
+            else if (pid > 0) {  /* parent process */
+                close(sd_client);
+            }
+            else {               /* child process */
+                close(sd_server);
+
+                int cnt;
+                struct sockaddr_in addr;
+                socklen_t addr_size = sizeof(struct sockaddr_in);
+                if ((cnt = getpeername(sd_client, (struct sockaddr *)&addr,
+                                &addr_size)) < 0) {
+                    perror("ERROR: getpeername()");
+                    send_static_500(sd_client);
+                    shutdown(sd_client, SHUT_WR);
+                    exit(EXIT_FAILURE);
+                }
+                char client_ip[20];
+                client_ip[cnt-1] = '\0';
+                strcpy(&client_ip[0], inet_ntoa(addr.sin_addr));
 
 
-            response_t res;
-            generate_response_header(filename, status, &req, &res);
-            send_response(sd_client, filename, &res);
+                char buf[MAX_SIZE_REQUEST];
+                if (read_from_socket(sd_client, &buf[0], MAX_SIZE_REQUEST, 0)
+                        < 0) {
+                    perror("ERROR: read_from_socket()");
+                    send_static_500(sd_client);
+                    shutdown(sd_client, SHUT_WR);
+                    exit(EXIT_FAILURE);
+                }
 
-            //int read_from_socket (int fd, char *buf, int len, int timeout);
+                request_t req;
 
-            shutdown(sd_client, SHUT_WR);
-            // close(sd_client);
-            exit(EXIT_SUCCESS);
+                int status = parse_request(&buf[0], &req);
+
+                char filename[MAX_SIZE_URI];
+                if (sprintf(filename, "%s%s", my_opt.root_dir, req.uri) < 0) {
+                    fprintf(stderr, "ERROR: sprintf()");
+                    send_static_500(sd_client);
+                    shutdown(sd_client, SHUT_WR);
+                    exit(EXIT_FAILURE);
+                }
+
+                // TODO remove before shipping
+                print_log(stderr, "FILENAME: %s\n", filename);
+                print_log(stderr, "METHOD:   %d\n", req.method);
+                print_log(stderr, "STATUS:   %d\n", http_status_list[status].code);
+                print_log(stderr, "URI:      %s\n", req.uri);
+                print_log(stderr, "RANGE:    %d\n", req.range_start);
+
+                // TODO handle our own error codes
+                response_t res;
+                generate_response_header(filename, status, &req, &res);
+
+                if ((cnt = send_response(sd_client, filename, &res)) < 0) {
+                    fprintf(stderr, "ERROR: send_response()");
+
+                    // this might not work, but we can try.  send_static_500
+                    // will handle all further errors.
+                    send_static_500(sd_client);
+                    shutdown(sd_client, SHUT_WR);
+                    exit(EXIT_FAILURE);
+                }
+
+                // in parse_request, we put a '\0' at the end of the first line,
+                // so the use of &buf[0] below is "safe"
+                log_request(client_ip, res.date, &buf[0], res.status, cnt);
+                shutdown(sd_client, SHUT_WR);
+                exit(EXIT_SUCCESS);
+            }
+            pause();
         }
-
-        pause();
     } /* end while */
 
+    fclose(my_opt.log_fd);
     printf("[%d] Good Bye...\n", getpid());
     exit(retcode);
 } /* end of main */
