@@ -83,6 +83,8 @@ sub connect_to_server {
 
     # Pass request to the user agent and get a response back from the server
     my $res = $ua->request($req);
+    print "RESPONSE: ";
+    print $res->as_string;
 
     subtest "$method '$url'" => sub {
         #--------------------------------------------------

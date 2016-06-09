@@ -10,6 +10,20 @@
 
 #define until(x) while(!(x))
 
+http_status_t parse_method_and_uri(char *first_line, request_t *out);
+http_status_t parse_range(char *field, request_t *out);
+http_status_t parse_date(char *field, request_t *out);
+
+
+/*!
+ * \brief Finds the next occurrence of a char in the given string.
+ *
+ * \param c     The char to look for.
+ * \param str   The string to look in.
+ * \param start The start index in the string.  The string is only searched
+ *              from this index onwards.
+ * \return      The index of the first occurence of c after the given index.
+ */
 int find_next_char(char c, char *str, int start) {
 
     int result = start;
@@ -26,6 +40,14 @@ int find_next_char(char c, char *str, int start) {
 }
 
 
+/*!
+ * \brief Finds the next occurrence of \r\n in the given string.
+ *
+ * \param str   The string to look in.
+ * \param start The start index in the string.  The string is only searched
+ *              from this index onwards.
+ * \return      The index of the first occurence of \r\n after the given index.
+ */
 int
 find_next_clrf(char *str, int start) {
 
@@ -45,6 +67,16 @@ find_next_clrf(char *str, int start) {
     return result;
 }
 
+/*!
+ * \brief Parses a HTTP request
+ *
+ * \param request  The null-terminated request string.
+ * \param out      The request_t pointer to which the result is written.
+ *
+ * \return  A HTTP status code.  If the return value is not HTTP_STATUS_OK, an
+ *          error occurred.  However, if the function returns HTTP_STATUS_OK it
+ *          does not necessarly mean, that the request is completely valid.
+ */
 http_status_t
 parse_request(char *request, request_t *out) {
 
@@ -94,6 +126,19 @@ parse_request(char *request, request_t *out) {
     return result;
 }
 
+
+/*!
+ * \brief Determines the HTTP method and the requested URI.
+ *
+ * Both values are written to the given request_t pointer.
+ *
+ * \param first_line    The first line of the HTTP request (method and URI are
+ *                      parsed from the first line)
+ * \param out           The request_t pointer to which the result is written.
+ *
+ * \return  A HTTP status code.  If the return value is not HTTP_STATUS_OK, an
+ *          error occurred.
+ */
 http_status_t
 parse_method_and_uri(char *first_line, request_t *out) {
 
@@ -112,6 +157,9 @@ parse_method_and_uri(char *first_line, request_t *out) {
 
     // TODO inspect return value of malloc
     out->uri = (char *)malloc((MAX_SIZE_URI+1) * sizeof(char));
+    if (out->uri == NULL) {
+        return HTTP_STATUS_INTERNAL_SERVER_ERROR;
+    }
 
     int size = offset;
     do {
@@ -124,11 +172,31 @@ parse_method_and_uri(char *first_line, request_t *out) {
     else {
         memcpy(out->uri, &first_line[offset], size-offset);
         out->uri[size-offset] = '\0';
+
+        if (strncmp(out->uri, "/cgi-bin", 8) == 0) {
+            out->is_cgi = TRUE;
+        }
+        else {
+            out->is_cgi = FALSE;
+        }
     }
 
     return HTTP_STATUS_OK;
 }
 
+/*!
+ * \brief Parses the value of a Content-Range field
+ *
+ * The Content-Range field value must have the format bytes=<begin>-, that is
+ * it must only contain a start index but not an end index.  If it contains an
+ * end index, only the start index is parsed and no error occurs.
+ *
+ * \param field  The Content-Range field value
+ * \param out    The request_t pointer to which the result is written.
+ *
+ * \return  A HTTP status code.  If the return value is not HTTP_STATUS_OK, an
+ *          error occurred.
+ */
 http_status_t
 parse_range(char *field, request_t *out) {
 
@@ -148,6 +216,15 @@ parse_range(char *field, request_t *out) {
     return HTTP_STATUS_PARTIAL_CONTENT;
 }
 
+/*!
+ * \brief Parses the value a date field (If-Modified-Since and Date)
+ *
+ * \param field  The Date or If-Modified-Since field value
+ * \param out    The request_t pointer to which the result is written.
+ *
+ * \return  A HTTP status code.  If the return value is not HTTP_STATUS_OK, an
+ *          error occurred.
+ */
 http_status_t
 parse_date(char *field, request_t *out) {
 

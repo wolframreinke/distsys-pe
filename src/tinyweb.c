@@ -71,6 +71,8 @@ sig_handler(int sig)
             server_running = false;
             break;
         case SIGCHLD:
+            // TODO Reutemann fragen was das soll, und warum hier tausend mal
+            // pid 0 ausgegeben wird.
             while ((pid=wait3(&status, WNOHANG, (struct rusage *)0)) != -1) {
                 safe_printf("\n[%d] Child finished, pid %d.\n", getpid(), pid);
             } /* end while */
@@ -306,6 +308,7 @@ main(int argc, char *argv[])
         struct sockaddr_in client_sa;
         client_sa_len = sizeof(client_sa);
 
+
         int sd_client = accept(sd_server,
                 (struct sockaddr *)&client_sa,
                 &client_sa_len);
@@ -393,7 +396,8 @@ main(int argc, char *argv[])
                 shutdown(sd_client, SHUT_WR);
                 exit(EXIT_SUCCESS);
             }
-            pause();
+
+            // pause();
         }
     } /* end while */
 
