@@ -1,0 +1,17 @@
+Kommentare für Funktionen in C-Dateien schreiben, nicht in H-Dateien
+Datenstrukturen in H-Dateien dokumentieren
+
+
+Fabian
+        http.h / http.c
+        sem_print.h / sem_print.c
+        content.h / content.c
+
+Wolfram
+        response.h / response.c
+        request.h / request.c
+        tinyweb.h / tinyweb.c
+
+Martin
+        safe_print.h / safe_print.c
+        log.h / log.c
