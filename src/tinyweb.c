@@ -7,10 +7,6 @@
  * Author:  Ralf Reutemann
  *
  *===================================================================*/
-//
-// TODO: Include your module header here
-//
-
 
 #include <stdio.h>
 #include <time.h>
@@ -71,9 +67,7 @@ sig_handler(int sig)
             server_running = false;
             break;
         case SIGCHLD:
-            // TODO Reutemann fragen was das soll, und warum hier tausend mal
-            // pid 0 ausgegeben wird.
-            while ((pid=wait3(&status, WNOHANG, (struct rusage *)0)) != -1) {
+            while ((pid=wait3(&status, WNOHANG, (struct rusage *)0)) > 0) {
                 safe_printf("\n[%d] Child finished, pid %d.\n", getpid(), pid);
             } /* end while */
             break;
@@ -396,8 +390,6 @@ main(int argc, char *argv[])
                 shutdown(sd_client, SHUT_WR);
                 exit(EXIT_SUCCESS);
             }
-
-            // pause();
         }
     } /* end while */
 
