@@ -82,6 +82,10 @@ $(DBG_OBJ_DIR)/%.o : $(SRC_DIR)/%.c
 	@echo CC $(DEBUG) $<
 	@$(CC) $(CFLAGS) -I$(SRC_DIR) -Ilibsockets $(DEBUG) -o $(DBG_OBJ_DIR)/$*.o -c $<
 
+.PHONY: docs
+docs:
+	doxygen Doxyfile
+
 .PHONY: clean
 clean:
 	$(MAKE) -C libsockets clean
