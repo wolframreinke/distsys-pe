@@ -33,12 +33,12 @@
 #define IS_DIRECTORY(mode)  (S_ISDIR(mode) && ((S_IXOTH || S_IROTH) & (mode)))
 #define IS_READABLE(mode)   (S_ISREG(mode) && (S_IROTH & (mode)))
 
-// used to ensure that CGI script child processes inherit env vars.
+/* used to ensure that CGI script child processes inherit env vars. */
 extern char **environ;
 
-// helper functions, defined at the bottom of the file
-int send_cgi_output(int sd_client, const char *filename);
-int send_date(int sd, const time_t *date, char *name, char *buf);
+/* helper functions, defined at the bottom of the file */
+static int send_cgi_output(int sd_client, const char *filename);
+static int send_date(int sd, const time_t *date, char *name, char *buf);
 
 /* --------------------------------------------------------------------------
  *  generate_response_header(filename, status, req, out)
@@ -49,7 +49,7 @@ int send_date(int sd, const time_t *date, char *name, char *buf);
  *                   including the root dir, not just the requested URI)
  *  \param status    The HTTP status to send.  This is not necessarily the
  *                   status that gets actually sent.  If an error occurs during
- *                   the execution of this function, an error status might be
+ *                   the execution of this function, a different status might be
  *                   used.
  *  \param req       The request for which the server response should be
  *                   generated.
@@ -142,13 +142,12 @@ send_response(int sd_client, const char *filename, response_t *res) {
             bytes_sent += cnt;                                               \
         }
 
-    cnt = sprintf(&buf[0], "HTTP/1.1 %d %s\r\n",
+    cnt = sprintf(buf, "HTTP/1.1 %d %s\r\n",
             http_status_list[res->status].code,
             http_status_list[res->status].text);
 
     if (cnt < 0) { return -1; }
     bytes_sent += cnt;
-
     SEND_TO_CLIENT(buf, cnt);
 
     if (send_date(sd_client, &res->date, "Date", (char *)buf) < 0) {
@@ -189,7 +188,7 @@ send_response(int sd_client, const char *filename, response_t *res) {
             }
             SEND_TO_CLIENT(buf, cnt);
 
-            if ((cnt = sprintf(buf, "Content-Length: %u\r\n",
+            if ((cnt = sprintf(buf, "Content-Length: %zd\r\n",
                             res->content_length)) < 0) {
                 return -1;
             }
@@ -255,13 +254,13 @@ send_response(int sd_client, const char *filename, response_t *res) {
 void
 send_static_500(int sd) {
 
-    // local stack allocations like these should be fine (?)
+    /* local stack allocations like these should be fine (?) */
     char buf[MAX_SIZE_LINE], timebuf[32];
     int cnt;
     time_t now = time(NULL);
     struct tm *timestruct = gmtime(&now);
 
-    if ((cnt = sprintf(&buf[0], "HTTP/1.1 500 Internal Server Error\r\n")) < 0){
+    if ((cnt = sprintf(buf, "HTTP/1.1 500 Internal Server Error\r\n")) < 0){
         return;
     }
 
@@ -269,7 +268,7 @@ send_static_500(int sd) {
         return;
     }
 
-    strftime(timebuf, 32, "%a, %d %b %Y %H:%M:%S GMT\r\n", &timestruct[0]);
+    strftime(timebuf, 32, "%a, %d %b %Y %H:%M:%S GMT\r\n", timestruct);
     timebuf[31] = '\0';
 
     if ((cnt = sprintf(buf, "Date: %s", timebuf)) < 0) {
@@ -304,13 +303,13 @@ send_static_500(int sd) {
  *
  *  \return Either 0 when the function executed successfully, or -1 otherwise.
  */
-int
+static int
 send_date(int sd, const time_t *date, char *name, char *buf) {
 
     int cnt;
     char timebuf[32];
     struct tm *timestruct = gmtime(date);
-    strftime(timebuf, 32, "%a, %d %b %Y %H:%M:%S GMT\r\n", &timestruct[0]);
+    strftime(timebuf, 32, "%a, %d %b %Y %H:%M:%S GMT\r\n", timestruct);
     timebuf[31] = '\0';
 
     if ((cnt = sprintf(buf, "%s: %s", name, timebuf)) < 0) {
@@ -340,7 +339,7 @@ send_date(int sd, const time_t *date, char *name, char *buf) {
  *  \return On success, the number of bytes sent is returned, on error, -1 is
  *          returned.
  */
-int
+static int
 send_cgi_output(int sd_client, const char *filename) {
 
     int pid, fd_pipe[2];
@@ -364,7 +363,7 @@ send_cgi_output(int sd_client, const char *filename) {
 
         /* redirect everything and count how many bytes the child writes */
         do {
-            cnt = read(fd_pipe[0], &buf[0], MAX_SIZE_BUFFER_CGI);
+            cnt = read(fd_pipe[0], buf, MAX_SIZE_BUFFER_CGI);
 
             if (cnt < 0) {
                 if (errno != EINTR) {

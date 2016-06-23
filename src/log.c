@@ -47,7 +47,7 @@ log_request(const char *host, time_t date, const char *request_first_line,
     // TODO time zone stuff
     char timebuf[32];
     struct tm *timestruct = gmtime(&date);
-    strftime(timebuf, 32, "%d/%b/%Y:%H:%M:%S %z", &timestruct[0]);
+    strftime(timebuf, 32, "%d/%b/%Y:%H:%M:%S %z", timestruct);
     timebuf[31] = '\0';
 
     fprintf(logfile, "%s - - [%s] \"%s\" %d %zd\n",

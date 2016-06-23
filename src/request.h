@@ -1,3 +1,14 @@
+/*! \file       request.h
+ *  \author     Fabian Haag
+ *  \author     Wolfram Reinke
+ *  \author     Martin Schmid
+ *  \date       July 22, 2016
+ *  \brief      Parsing HTTP requests.
+ *
+ *  This module contains HTTP requests (request_t), and the function
+ *  parse_request(), which parses a HTTP request from a string.
+ */
+
 #ifndef _REQUEST_H_
 #define _REQUEST_H_
 
@@ -13,26 +24,19 @@
 #define FALSE 0
 
 /*!
- * \brief Information about a HTTP request.
+ *  \brief The contents of a HTTP GET or HEAD request
  */
 typedef struct {
 
-    /*! The HTTP request method, only GET and HEAD are supported */
-    http_method_t method;
-
-    /*! The requested URI */
-    char *uri;
-
-    /*! The first component of the Content-Range field, the second component is
-     * always EOF */
-    int range_start;
-
-     /*!< The value of the If-Modified-Since field, if sent */
-    time_t modified_since;
-
-    /*!< If the URI starts with /cgi-bin (that is, we need to execute a CGI
-     * script */
-    int is_cgi;
+    http_method_t method;  /*!< The HTTP request method, only GET and HEAD are
+                                supported */
+    char *uri;             /*!< The requested URI */
+    int range_start;       /*!< The first component of the Content-Range field,
+                                the second component is always EOF */
+    time_t modified_since; /*!< The value of the If-Modified-Since field, if
+                                sent */
+    int is_cgi;            /*!< If the URI starts with /cgi-bin (that is, we
+                                need to execute a CGI script */
 
 } request_t;
 

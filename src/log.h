@@ -10,4 +10,4 @@ void
 log_request(const char *host, time_t date, const char *request_first_line,
         http_status_t status, size_t bytes_sent);
 
-#endif // _LOG_H_
+#endif /* _LOG_H_ */

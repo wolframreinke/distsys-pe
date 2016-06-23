@@ -21,16 +21,16 @@ typedef enum http_method {
 
 
 typedef enum http_status {
-    HTTP_STATUS_OK = 0,                    // 200
-    HTTP_STATUS_PARTIAL_CONTENT,           // 206
-    HTTP_STATUS_MOVED_PERMANENTLY,         // 301
-    HTTP_STATUS_NOT_MODIFIED,              // 304
-    HTTP_STATUS_BAD_REQUEST,               // 400
-    HTTP_STATUS_FORBIDDEN,                 // 401  // TODO: Reutemann anscheißen
-    HTTP_STATUS_NOT_FOUND,                 // 404  // ist eigentlich 403!!!!1!
-    HTTP_STATUS_RANGE_NOT_SATISFIABLE,     // 416
-    HTTP_STATUS_INTERNAL_SERVER_ERROR,     // 500
-    HTTP_STATUS_NOT_IMPLEMENTED            // 501
+    HTTP_STATUS_OK = 0,                    /* 200 */
+    HTTP_STATUS_PARTIAL_CONTENT,           /* 206 */
+    HTTP_STATUS_MOVED_PERMANENTLY,         /* 301 */
+    HTTP_STATUS_NOT_MODIFIED,              /* 304 */
+    HTTP_STATUS_BAD_REQUEST,               /* 400 */
+    HTTP_STATUS_FORBIDDEN,                 /* 401 */  // TODO: Reutemann anscheißen
+    HTTP_STATUS_NOT_FOUND,                 /* 404 */  // ist eigentlich 403!!!!1!
+    HTTP_STATUS_RANGE_NOT_SATISFIABLE,     /* 416 */
+    HTTP_STATUS_INTERNAL_SERVER_ERROR,     /* 500 */
+    HTTP_STATUS_NOT_IMPLEMENTED            /* 501 */
 } http_status_t;
 
 
@@ -50,4 +50,3 @@ extern http_method_entry_t http_method_list[];
 extern http_status_entry_t http_status_list[];
 
 #endif
-

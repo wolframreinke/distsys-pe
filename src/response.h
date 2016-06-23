@@ -50,7 +50,7 @@ typedef struct {
                                            is generated */
     time_t last_modified;             /*!< The time the requested file was last
                                            modified */
-    unsigned int content_length;      /*!< The length of the requested file in
+    size_t content_length;            /*!< The length of the requested file in
                                            bytes */
     http_content_type_t content_type; /*!< The content type of the requested
                                            type */

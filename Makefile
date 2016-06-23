@@ -92,4 +92,5 @@ clean:
 	$(MAKE) -C libdebug clean
 	rm -f $(TARGETS)
 	rm -rf $(BUILD_DIR)
+	rm -rf doc
 

@@ -1,6 +1,13 @@
-//
-// TODO: Include your module header here
-//
+/*! \file       tinyweb.h
+ *  \author     Ralf Reutemann
+ *  \author     Fabian Haag
+ *  \author     Wolfram Reinke
+ *  \author     Martin Schmid
+ *  \date       July 22, 2016
+ *  \brief      Tinyweb program options and general configuration.
+ *
+ *  This file defines program options and for the Tinyweb web server.
+ */
 
 #ifndef _TINYWEB_H
 #define _TINYWEB_H
@@ -22,15 +29,16 @@
 #define DEFAULT_HTML_PAGE      "default.html"
 
 
+/*! \brief The program options accepted by Tinyweb. */
 typedef struct prog_options {
-    char               *progname;
-    char               *root_dir;
-    char               *log_filename;
-    FILE               *log_fd;
-    bool                verbose;
-    unsigned short      timeout;
-    struct addrinfo    *server_addr;
-    int                 server_port;
+    char            *progname;     /*!< The name of the program             */
+    char            *root_dir;     /*!< The root directory for web contents */
+    char            *log_filename; /*!< The filename of the log file        */
+    FILE            *log_fd;       /*!< The file descriptor of the log file */
+    bool             verbose;      /*!< If more output should be printed    */
+    unsigned short   timeout;      /*!< (not used)                          */
+    struct addrinfo *server_addr;  /*!< The address info for the server     */
+    int              server_port;  /*!< The port, this server serves        */
 } prog_options_t;
 
 #endif

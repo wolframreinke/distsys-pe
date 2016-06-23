@@ -1,59 +1,70 @@
-/*===================================================================
+/*! \file       tinyweb.c
+ *  \author     Ralf Reutemann
+ *  \author     Fabian Haag
+ *  \author     Wolfram Reinke
+ *  \author     Martin Schmid
+ *  \date       July 22, 2016
+ *  \brief      Tinyweb main routine and command line argument parsing.
  *
- * DHBW Ravensburg - Campus Friedrichshafen
- *
- * Vorlesung Verteilte Systeme
- *
- * Author:  Ralf Reutemann
- *
- *===================================================================*/
-
-#include <stdio.h>
-#include <time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/errno.h>
-#include <sys/signal.h>
-#include <sys/time.h>
-#include <sys/wait.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <syslog.h>
-#include <netdb.h>
-
-#include <unistd.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <string.h>
-#include <ctype.h>
-#include <signal.h>
-#include <getopt.h>
+ *  This file defines the main entry point of the Tinyweb web server, and
+ *  functions to parse and access the command line arguments given to the
+ *  executable.
+ */
 
 #include "tinyweb.h"
+
+#include <arpa/inet.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <getopt.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/errno.h>
+#include <sys/resource.h>
+#include <sys/signal.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <syslog.h>
+#include <time.h>
+#include <unistd.h>
+
+/* from libsocket */
 #include "connect_tcp.h"
 #include "passive_tcp.h"
 #include "socket_io.h"
 
-#include "safe_print.h"
-#include "sem_print.h"
 #include "http.h"
+#include "log.h"
 #include "request.h"
 #include "response.h"
-#include "log.h"
+#include "safe_print.h"
+#include "sem_print.h"
 
 
-// Must be true for the server accepting clients,
-// otherwise, the server will terminate
+/* Must be true for the server accepting clients, otherwise, the server will
+ * terminate */
 static volatile sig_atomic_t server_running = false;
 
 #define IS_ROOT_DIR(mode)   (S_ISDIR(mode) && ((S_IROTH || S_IXOTH) & (mode)))
 
-//
-// TODO: Include your function header here
-//
+/* --------------------------------------------------------------------------
+ *  sig_handler(sig)
+ * -------------------------------------------------------------------------- */
+/*! \brief Handles SIGINT and SIGCHLD signals.
+ *
+ *  Makes sure that the server exits gracefully on SIGINT and notifies the user
+ *  about terminating child processes.
+ *
+ *  \param sd  The signal number that was received by the process.
+ */
 static void
 sig_handler(int sig)
 {
@@ -77,20 +88,41 @@ sig_handler(int sig)
 } /* end of sig_handler */
 
 
-//
-// TODO: Include your function header here
-//
+/* --------------------------------------------------------------------------
+ *  print_usage(progname)
+ * -------------------------------------------------------------------------- */
+/*! \brief Writes usage information to stderr.
+ *
+ *  \param progname  The program name which is printed as part of the usage
+ *                   info.
+ */
 static void
 print_usage(const char *progname)
 {
-  fprintf(stderr, "Usage: %s options\n", progname);
-  // TODO: Print the program options
+  fprintf(stderr, "Usage: %s [OPTION]...\n\n", progname);
+  fprintf(stderr,
+      "  -f, --file=FILE    Write log output to FILE; if not specified, log\n"
+      "                     messages are written to stdout.\n"
+      "  -p, --port=PORT    Accept clients on port PORT.\n"
+      "  -d, --dir=DIR      Use DIR as root directory for web contents.\n"
+      "  -v, --verbose      More detailed output.\n" );
 } /* end of print_usage */
 
 
-//
-// TODO: Include your function header here
-//
+/* --------------------------------------------------------------------------
+ *  get_options(argc, argv, opt)
+ * -------------------------------------------------------------------------- */
+/*! \brief Processes command line arguments and writes the result to opt.
+ *
+ *  \param argc  The number of arguments (can be passed over directly from main)
+ *  \param argv  The arguments (can be passed to over directly from main)
+ *  \param opt   The prog_options_t struct to which the option values are
+ *               written.
+ *
+ *  \return      1, if the program options were parsed correctly, and if both
+ *               the root dir and the port of the web server have been defined,
+ *               0 otherwise.
+ */
 static int
 get_options(int argc, char *argv[], prog_options_t *opt)
 {
@@ -129,11 +161,11 @@ get_options(int argc, char *argv[], prog_options_t *opt)
     while (success) {
         int option_index = 0;
         static struct option long_options[] = {
-            { "file",    required_argument, 0, 0 },
-            { "port",    required_argument, 0, 0 },
-            { "dir",     required_argument, 0, 0 },
-            { "verbose", no_argument,       0, 0 },
-            { "debug",   no_argument,       0, 0 },
+            { "file",    required_argument, 0, 'f' },
+            { "port",    required_argument, 0, 'p' },
+            { "dir",     required_argument, 0, 'd' },
+            { "verbose", no_argument,       0, 'v' },
+            { "debug",   no_argument,       0,  0  },
             { NULL,      0, 0, 0 }
         };
 
@@ -142,7 +174,7 @@ get_options(int argc, char *argv[], prog_options_t *opt)
 
         switch(c) {
             case 'f':
-                // 'optarg' contains file name
+                /* 'optarg' contains file name */
                 opt->log_filename = (char *)malloc(strlen(optarg) + 1);
                 if (opt->log_filename != NULL) {
                     strcpy(opt->log_filename, optarg);
@@ -152,7 +184,7 @@ get_options(int argc, char *argv[], prog_options_t *opt)
                 } /* end if */
                 break;
             case 'p':
-                // 'optarg' contains port number
+                /* 'optarg' contains port number */
                 if((err = getaddrinfo(NULL, optarg, &hints, &opt->server_addr)) != 0) {
                     fprintf(stderr, "Cannot resolve service '%s': %s\n", optarg, gai_strerror(err));
                     return EXIT_FAILURE;
@@ -161,15 +193,13 @@ get_options(int argc, char *argv[], prog_options_t *opt)
                 struct servent *pse = getservbyname(optarg, "http");
                 if (pse != 0) {
                     opt->server_port = ntohs((unsigned short)pse->s_port);
-                    printf("%d\n", opt->server_port);
                 }
                 else {
                     opt->server_port = (unsigned short)atoi(optarg);
-                    printf("%d\n", opt->server_port);
                 }
                 break;
             case 'd':
-                // 'optarg contains root directory */
+                /* 'optarg contains root directory */
                 opt->root_dir = (char *)malloc(strlen(optarg) + 1);
                 if (opt->root_dir != NULL) {
                     strcpy(opt->root_dir, optarg);
@@ -186,20 +216,32 @@ get_options(int argc, char *argv[], prog_options_t *opt)
         } /* end switch */
     } /* end while */
 
-    // check presence of required program parameters
+    /* check presence of required program parameters */
     success = success && opt->server_addr && opt->root_dir;
 
-    // additional parameters are silently ignored, otherwise check for
-    // ((optind < argc) && success)
+    /* additional parameters are silently ignored, otherwise check for
+     * ((optind < argc) && success) */
 
     return success;
 } /* end of get_options */
 
 
+/* --------------------------------------------------------------------------
+ *  open_logfile(opt)
+ * -------------------------------------------------------------------------- */
+/*! \brief Opens the log file specified with the program options.
+ *
+ *  If the user did not specify a log file, stdout is used instead.
+ *
+ *  \param opt  The prog_options_t struct which is used to open the log file.
+ *              The log file name is read from the log_filename field of the
+ *              struct, and the file descriptor is written back to the log_fd
+ *              field.
+ */
 static void
 open_logfile(prog_options_t *opt)
 {
-    // open logfile or redirect to stdout
+    /* open logfile or redirect to stdout */
     if (opt->log_filename != NULL && strcmp(opt->log_filename, "-") != 0) {
         opt->log_fd = fopen(opt->log_filename, "w");
         if (opt->log_fd == NULL) {
@@ -213,6 +255,16 @@ open_logfile(prog_options_t *opt)
 } /* end of open_logfile */
 
 
+/* --------------------------------------------------------------------------
+ *  open_logfile(opt)
+ * -------------------------------------------------------------------------- */
+/*! \brief Checks if tinyweb's root directory is readable.
+ *
+ *  If it isn't, this function will exit the current process with return code 1.
+ *
+ *  \param opt  The prog_options_t struct from which the root directory path is
+ *              read.
+ */
 static void
 check_root_dir(prog_options_t *opt)
 {
@@ -230,13 +282,20 @@ check_root_dir(prog_options_t *opt)
 } /* end of check_root_dir */
 
 
+/* --------------------------------------------------------------------------
+ *  install_signal_handlers()
+ * -------------------------------------------------------------------------- */
+/*! \brief Installs signal handlers for SIGINT and SIGCHLD signals.
+ *
+ *  If the handlers cannot be installed, the function exits the current process
+ *  with return code 1 after writing an error message to stderr.
+ */
 static void
 install_signal_handlers(void)
 {
     struct sigaction sa;
 
-    // init signal handler(s)
-    // TODO: add other signals
+    /* init signal handler(s) */
     sa.sa_flags = 0;
     sigemptyset(&sa.sa_mask);
     sa.sa_handler = sig_handler;
@@ -262,19 +321,18 @@ main(int argc, char *argv[])
     int retcode = EXIT_SUCCESS;
     prog_options_t my_opt;
 
-    // read program options
+    /* read program options */
     if (get_options(argc, argv, &my_opt) == 0) {
         print_usage(my_opt.progname);
         exit(EXIT_FAILURE);
     } /* end if */
 
-    // set the time zone (TZ) to GMT in order to
-    // ignore any other local time zone that would
-    // interfere with correct time string parsing
+    /* set the time zone (TZ) to GMT in order to ignore any other local time
+     * zone that would interfere with correct time string parsing */
     setenv("TZ", "GMT", 1);
     tzset();
 
-    // do some checks and initialisations...
+    /* do some checks and initialisations... */
     open_logfile(&my_opt);
     check_root_dir(&my_opt);
     install_signal_handlers();
@@ -282,9 +340,8 @@ main(int argc, char *argv[])
 
     set_logfile(my_opt.log_fd);
 
-    // TODO: start the server and handle clients...
-    // here, as an example, show how to interact with the
-    // condition set by the signal handler above
+    /* here, as an example, show how to interact with the condition set by the
+     * signal handler above */
     printf("[%d] Starting server '%s'...\n", getpid(), my_opt.progname);
     server_running = true;
 
@@ -327,53 +384,49 @@ main(int argc, char *argv[])
             else {               /* child process */
                 close(sd_server);
 
-                int cnt;
-                struct sockaddr_in addr;
-                socklen_t addr_size = sizeof(struct sockaddr_in);
-                if ((cnt = getpeername(sd_client, (struct sockaddr *)&addr,
-                                &addr_size)) < 0) {
+                int cnt, status;
+                struct sockaddr_in sa;
+                socklen_t sasize = sizeof(struct sockaddr_in);
+                char client_ip[20], buf[MAX_SIZE_REQUEST];
+                char filename[MAX_SIZE_URI];
+
+                /* retrieve the client's IP address for logging */
+                cnt = getpeername(sd_client, (struct sockaddr *)&sa, &sasize);
+                if (cnt < 0) {
                     perror("ERROR: getpeername()");
                     send_static_500(sd_client);
                     shutdown(sd_client, SHUT_WR);
                     exit(EXIT_FAILURE);
                 }
-                char client_ip[20];
                 client_ip[cnt-1] = '\0';
-                strcpy(&client_ip[0], inet_ntoa(addr.sin_addr));
+                strcpy(client_ip, inet_ntoa(sa.sin_addr));
 
-
-                char buf[MAX_SIZE_REQUEST];
-                if (read_from_socket(sd_client, &buf[0], MAX_SIZE_REQUEST, 0)
-                        < 0) {
+                /* read the entire request into memory.  The last byte of the
+                 * request buffer filled with a terminating '\0' */
+                cnt = read_from_socket(sd_client, buf, MAX_SIZE_REQUEST-1, 0);
+                if (cnt < 0) {
                     perror("ERROR: read_from_socket()");
                     send_static_500(sd_client);
                     shutdown(sd_client, SHUT_WR);
                     exit(EXIT_FAILURE);
                 }
+                buf[MAX_SIZE_REQUEST-1] = '\0';
 
+                /* parse the request and retrieve the full filepath */
                 request_t req;
-
-                int status = parse_request(&buf[0], &req);
-
-                char filename[MAX_SIZE_URI];
-                if (sprintf(filename, "%s%s", my_opt.root_dir, req.uri) < 0) {
+                status = parse_request(buf, &req);
+                cnt = snprintf(filename, MAX_SIZE_URI, "%s%s",
+                               my_opt.root_dir, req.uri);
+                if (cnt < 0) {
                     fprintf(stderr, "ERROR: sprintf()");
                     send_static_500(sd_client);
                     shutdown(sd_client, SHUT_WR);
                     exit(EXIT_FAILURE);
                 }
 
-                // TODO remove before shipping
-                print_log(stderr, "FILENAME: %s\n", filename);
-                print_log(stderr, "METHOD:   %d\n", req.method);
-                print_log(stderr, "STATUS:   %d\n", http_status_list[status].code);
-                print_log(stderr, "URI:      %s\n", req.uri);
-                print_log(stderr, "RANGE:    %d\n", req.range_start);
-
-                // TODO handle our own error codes
+                /* generate the HTTP response and send it to the client */
                 response_t res;
                 generate_response_header(filename, status, &req, &res);
-
                 if ((cnt = send_response(sd_client, filename, &res)) < 0) {
                     fprintf(stderr, "ERROR: send_response()");
 
@@ -385,8 +438,8 @@ main(int argc, char *argv[])
                 }
 
                 // in parse_request, we put a '\0' at the end of the first line,
-                // so the use of &buf[0] below is "safe"
-                log_request(client_ip, res.date, &buf[0], res.status, cnt);
+                // so the use of buf below is "safe"
+                log_request(client_ip, res.date, buf, res.status, cnt);
                 shutdown(sd_client, SHUT_WR);
                 exit(EXIT_SUCCESS);
             }
