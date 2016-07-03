@@ -1,3 +1,9 @@
+/*! \file       content.h
+ *  \author     Ralf Reutemann
+ *  \brief      HTTP content information.
+ *
+ *  This file defines commonly used HTTP content types.
+ */
 /*===================================================================
  * DHBW Ravensburg - Campus Friedrichshafen
  *
@@ -6,11 +12,11 @@
  * Author:  Ralf Reutemann
  *
  *===================================================================*/
-
+ 
 #ifndef _CONTENT_H
 #define _CONTENT_H
 
-
+/*! \brief The HTTP content types accepted by Tinyweb. */
 typedef enum http_content_type {
     HTTP_CONTENT_TYPE_HTML = 0,
     HTTP_CONTENT_TYPE_CSS,
@@ -22,7 +28,7 @@ typedef enum http_content_type {
     HTTP_CONTENT_TYPE_DEFAULT
 } http_content_type_t;
 
-
+/*! \brief The http method entry consisting of name and text. */
 typedef struct http_content_type_entry {
     char                *ext;
     char                *name;

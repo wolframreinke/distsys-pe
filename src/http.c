@@ -1,3 +1,10 @@
+/*! \file       http.c
+ *  \author     Ralf Reutemann
+ *  \brief      Provides http information.
+ *
+ *  This file defines http information about the availability of http methods
+ *  and http information codes.
+ */
 /*===================================================================
  * DHBW Ravensburg - Campus Friedrichshafen
  *
@@ -16,7 +23,7 @@
 #include "tinyweb.h"
 #include "http.h"
 
-
+/*! \brief The HTTP methods and their implementation status.*/
 http_method_entry_t http_method_list[] = {
     { "GET",         HTTP_METHOD_GET             },
     { "HEAD",        HTTP_METHOD_HEAD            },
@@ -31,7 +38,7 @@ http_method_entry_t http_method_list[] = {
     { NULL,          HTTP_METHOD_NOT_IMPLEMENTED }
 };
 
-
+/*! \brief The HTTP infomration codes and their explanation.*/
 http_status_entry_t http_status_list[] = {
     { 200, "OK"                              },  /* HTTP_STATUS_OK                    */
     { 206, "Partial Content"                 },  /* HTTP_STATUS_PARTIAL_CONTENT       */

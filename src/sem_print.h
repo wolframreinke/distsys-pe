@@ -1,4 +1,10 @@
-/*===================================================================
+/*! \file       sem_print.h
+ *  \author     Ralf Reutemann
+ *  \brief      sem_print method declaration.
+ *
+ *  This file defines sem_print method declarations.
+ */
+ /*===================================================================
  * DHBW Ravensburg - Campus Friedrichshafen
  *
  * Vorlesung Verteilte Systeme
