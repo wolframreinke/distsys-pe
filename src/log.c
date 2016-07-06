@@ -1,3 +1,12 @@
+/*! \file       log.c
+ *  \author     Fabian Haag
+ *  \author     Wolfram Reinke
+ *  \author     Martin Schmid
+ *  \date       July 22, 2016
+ *  \brief      Functions to define logfile and write log-messages into logfile
+ *
+ *  See log.h for API documentation.
+ */
 #include <stdio.h>
 #include <time.h>
 
@@ -44,7 +53,6 @@ void
 log_request(const char *host, time_t date, const char *request_first_line,
         http_status_t status, size_t bytes_sent) {
 
-    // TODO time zone stuff
     char timebuf[32];
     struct tm *timestruct = gmtime(&date);
     strftime(timebuf, 32, "%d/%b/%Y:%H:%M:%S %z", timestruct);

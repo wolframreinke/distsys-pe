@@ -1,3 +1,13 @@
+/*! \file       log.c
+ *  \author     Fabian Haag
+ *  \author     Wolfram Reinke
+ *  \author     Martin Schmid
+ *  \date       July 22, 2016
+ *  \brief      Functions to define logfile and write log-messages into logfile
+ *
+ *  This module provides functions to set a logfile and to write log-messages
+ *  into the defined logfile.
+ */
 #ifndef _LOG_H_
 #define _LOG_H_
 

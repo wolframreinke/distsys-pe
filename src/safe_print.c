@@ -1,11 +1,11 @@
-/*===================================================================
- * DHBW Ravensburg - Campus Friedrichshafen
+/*! \file       safe_print.c
+ *  \author     Ralf Reutemann
+ *  \date       July 22, 2016
+ *  \brief      Functions to coordinate the console messages sent by the sig-
+ *				handlers
  *
- * Vorlesung Verteilte Systeme
- *
- * Author:  Ralf Reutemann
- *
- *===================================================================*/
+ *  See safe_print.h for API documentation.
+ */
 
 #include <stdio.h>
 #include <unistd.h>
@@ -14,6 +14,12 @@
 
 /*
  * safe_printf - async-signal-safe wrapper for printf
+ */
+ /*! \brief Projects the async-signal to a format with given length
+ *
+ *  \param	format 	The Format, the async-signal should be projected to
+ *
+ *  \return Integer value of the async-signal-safe
  */
 #define MAXS 1024
 int
@@ -26,7 +32,7 @@ safe_printf(const char *format, ...)
     va_start(args, format);
     vsnprintf(buf, sizeof(buf), format, args);
     va_end(args);
-    cc = write(STDOUT_FILENO, buf, strlen(buf)); /* write is async-signal-safe */
+    cc = write(STDOUT_FILENO, buf, strlen(buf));/* write is async-signal-safe */
 
     return (int)cc;
 } /* end of safe_printf */
