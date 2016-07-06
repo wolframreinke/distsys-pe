@@ -19,7 +19,7 @@
  *
  *  \param	format 	The Format, the async-signal should be projected to
  *
- *  \return Integer value of the async-signal-safe
+ *  \return Number of Bytes written (as Integer)
  */
 #define MAXS 1024
 int
