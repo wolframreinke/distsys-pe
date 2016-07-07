@@ -17,9 +17,6 @@
 #include "request.h"
 #include "safe_print.h"
 
-
-#define until(x) while(!(x))
-
 // helper functions, defined below parse_request
 static http_status_t parse_method_and_uri(char *first_line, request_t *out);
 static http_status_t parse_range(char *field, request_t *out);
@@ -34,7 +31,7 @@ static http_status_t parse_date(char *field, request_t *out);
  *  This function is only concerned with the structural analysis of the given
  *  HTTP request, and will as such return error codes if the request is
  *  syntactically invalid.  It does not check if the request is semantically
- *  valid.
+ *  valid (e.g. if the requested file doesn't exist).
  *
  *  \param strrequest  The null-terminated request string.  This input string is
  *                     modified, so a safety copy should be created if one needs

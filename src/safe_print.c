@@ -2,7 +2,7 @@
  *  \author     Ralf Reutemann
  *  \date       July 22, 2016
  *  \brief      Functions to coordinate the console messages sent by the sig-
- *				handlers
+ *              handlers
  *
  *  See safe_print.h for API documentation.
  */
@@ -17,7 +17,7 @@
  */
  /*! \brief Projects the async-signal to a format with given length
  *
- *  \param	format 	The Format, the async-signal should be projected to
+ *  \param  format  The Format, the async-signal should be projected to
  *
  *  \return Number of Bytes written (as Integer)
  */

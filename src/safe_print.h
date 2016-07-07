@@ -2,7 +2,7 @@
  *  \author     Ralf Reutemann
  *  \date       July 22, 2016
  *  \brief      Functions to coordinate the console messages sent by the sig-
- *				handlers.
+ *              handlers.
  *
  *  This module provides a function to safely print the asynchronous console-
  *  messages coming from the sihnal-handlers.
