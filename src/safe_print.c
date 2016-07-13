@@ -11,11 +11,14 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdarg.h>
-
-/*
- * safe_printf - async-signal-safe wrapper for printf
- */
+/* --------------------------------------------------------------------------
+ *  safe_printf(format, ...)
+ * -------------------------------------------------------------------------- */
  /*! \brief Projects the async-signal to a format with given length
+ *
+ *  This method is an async-signal-safe wrapper for the printf-method. It allows
+ *  to print the asynchronous messages from the signal-handlers to be printed
+ *  on the stdout without interfering each other.
  *
  *  \param  format  The Format, the async-signal should be projected to
  *
