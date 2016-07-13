@@ -21,8 +21,13 @@
 /*! The file to which log entries are written */
 static FILE *logfile = 0;
 
+/* --------------------------------------------------------------------------
+ *  set_logfile(lf)
+ * -------------------------------------------------------------------------- */
 /*!
  * \brief Sets the file to which log entries are written
+ *
+ * The logfile-pointer is set to the lf-pointer given to the method as parameter
  *
  * \param lf  The log file
  */
@@ -31,6 +36,9 @@ set_logfile(FILE *lf) {
     logfile = lf;
 }
 
+/* --------------------------------------------------------------------------
+ *  log_request(host, date, request_first_line, status, bytes_sent)
+ * -------------------------------------------------------------------------- */
 /*!
  * \brief Writes a log entry into the log file.
  *
